@@ -207,11 +207,25 @@ spec:
     env:
       # Required if endpoint is set to 4317.
       # Python autoinstrumentation uses http/proto by default
-      # so data must be sent to 4318 instead of 4137.
+      # so data must be sent to 4318 instead of 4317.
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://otel-collector:4318
+  dotnet:
+    env:
+      # Required if endpoint is set to 4317.
+      # Dotnet autoinstrumentation uses http/proto by default
+      # See https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/blob/888e2cd216c77d12e56b54ee91dafbc4e7452a52/docs/config.md#otlp
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: http://otel-collector:4318
 EOF
 ```
+
+The values for `propagators` are added to the `OTEL_PROPAGATORS` environment variable.
+Valid values for `propagators` are defined by the [OpenTelemetry Specification for OTEL_PROPAGATORS](https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_propagators).
+
+The value for `sampler.type` is added to the `OTEL_TRACES_SAMPLER` envrionment variable.
+Valid values for `sampler.type` are defined by the [OpenTelemetry Specification for OTEL_TRACES_SAMPLER](https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_traces_sampler).
+The value for `sampler.argument` is added to the `OTEL_TRACES_SAMPLER_ARG` environment variable. Valid values for `sampler.argument` will depend on the chosen sampler. See the [OpenTelemetry Specification for OTEL_TRACES_SAMPLER_ARG](https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_traces_sampler_arg) for more details.  
 
 The above CR can be queried by `kubectl get otelinst`.
 
@@ -348,7 +362,7 @@ spec:
 
     service:
       pipelines:
-        traces:
+        metrics:
           receivers: [prometheus]
           processors: []
           exporters: [logging]
@@ -381,13 +395,15 @@ Behind the scenes, the OpenTelemetry Operator will convert the Collector’s con
 
     service:
       pipelines:
-        traces:
+        metrics:
           receivers: [prometheus]
           processors: []
           exporters: [logging]
 ```
 
 Note how the Operator added a `global` section and a new `http_sd_configs` to the `otel-collector` scrape config, pointing to a Target Allocator instance it provisioned.
+
+More info on the TargetAllocator can be found [here](cmd/otel-allocator/README.md).
 
 ## Compatibility matrix
 
@@ -410,6 +426,8 @@ The OpenTelemetry Operator *might* work on versions outside of the given range, 
 
 | OpenTelemetry Operator | Kubernetes           | Cert-Manager        |
 |------------------------|----------------------|---------------------|
+| v0.72.0                | v1.19 to v1.26       | v1                  |
+| v0.71.0                | v1.19 to v1.25       | v1                  |
 | v0.70.0                | v1.19 to v1.25       | v1                  |
 | v0.69.0                | v1.19 to v1.25       | v1                  |
 | v0.68.0                | v1.19 to v1.25       | v1                  |
@@ -430,8 +448,6 @@ The OpenTelemetry Operator *might* work on versions outside of the given range, 
 | v0.52.0                | v1.19 to v1.23       | v1                  |
 | v0.51.0                | v1.19 to v1.23       | v1alpha2            |
 | v0.50.0                | v1.19 to v1.23       | v1alpha2            |
-| v0.49.0                | v1.19 to v1.23       | v1alpha2            |
-| v0.48.0                | v1.19 to v1.23       | v1alpha2            |
 
 
 
@@ -464,7 +480,6 @@ Target Allocator Maintainers ([@open-telemetry/operator-ta-maintainers](https://
 Maintainers ([@open-telemetry/operator-maintainers](https://github.com/orgs/open-telemetry/teams/operator-maintainers)):
 
 - [Jacob Aronoff](https://github.com/jaronoff97), Lightstep
-- [Juraci Paixão Kröhling](https://github.com/jpkrohling), Grafana Labs
 - [Pavol Loffay](https://github.com/pavolloffay), Red Hat
 - [Vineeth Pothulapati](https://github.com/VineethReddy02), Timescale
 
@@ -472,6 +487,7 @@ Emeritus Maintainers
 
 - [Alex Boten](https://github.com/codeboten), Lightstep
 - [Bogdan Drutu](https://github.com/BogdanDrutu), Splunk
+- [Juraci Paixão Kröhling](https://github.com/jpkrohling), Grafana Labs
 - [Tigran Najaryan](https://github.com/tigrannajaryan), Splunk
 
 Learn more about roles in the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md).
