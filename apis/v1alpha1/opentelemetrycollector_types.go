@@ -173,6 +173,16 @@ type OpenTelemetryCollectorSpec struct {
 	// If specified, indicates the pod's scheduling constraints
 	// +optional
 	Affinity *v1.Affinity `json:"affinity,omitempty"`
+	// Actions that the management system should take in response to container lifecycle events. Cannot be updated.
+	// +optional
+	Lifecycle *v1.Lifecycle `json:"lifecycle,omitempty"`
+	// Duration in seconds the pod needs to terminate gracefully upon probe failure.
+	// +optional
+	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
+	// Liveness config for the OpenTelemetry Collector except the probe handler which is auto generated from the health extension of the collector.
+	// It is only effective when healthcheckextension is configured in the OpenTelemetry Collector pipeline.
+	// +optional
+	LivenessProbe *Probe `json:"livenessProbe,omitempty"`
 }
 
 // OpenTelemetryTargetAllocator defines the configurations for the Prometheus target allocator.
@@ -182,6 +192,9 @@ type OpenTelemetryTargetAllocator struct {
 	// that can be run in a high availability mode is consistent-hashing.
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
+	// Resources to set on the OpenTelemetryTargetAllocator containers.
+	// +optional
+	Resources v1.ResourceRequirements `json:"resources,omitempty"`
 	// AllocationStrategy determines which strategy the target allocator should use for allocation.
 	// The current options are least-weighted and consistent-hashing. The default option is least-weighted
 	// +optional
@@ -299,6 +312,11 @@ type AutoscalerSpec struct {
 	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 	// +optional
 	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+	// Metrics is meant to provide a customizable way to configure HPA metrics.
+	// currently the only supported custom metrics is type=Pod.
+	// Use TargetCPUUtilization or TargetMemoryUtilization instead if scaling on these common resource metrics.
+	// +optional
+	Metrics []MetricSpec `json:"metrics,omitempty"`
 	// TargetCPUUtilization sets the target average CPU used across all replicas.
 	// If average CPU exceeds this value, the HPA will scale up. Defaults to 90 percent.
 	// +optional
@@ -306,6 +324,52 @@ type AutoscalerSpec struct {
 	// +optional
 	// TargetMemoryUtilization sets the target average memory utilization across all replicas
 	TargetMemoryUtilization *int32 `json:"targetMemoryUtilization,omitempty"`
+}
+
+// Probe defines the OpenTelemetry's pod probe config. Only Liveness probe is supported currently.
+type Probe struct {
+	// Number of seconds after the container has started before liveness probes are initiated.
+	// Defaults to 0 seconds. Minimum value is 0.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	InitialDelaySeconds *int32 `json:"initialDelaySeconds,omitempty"`
+	// Number of seconds after which the probe times out.
+	// Defaults to 1 second. Minimum value is 1.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
+	// How often (in seconds) to perform the probe.
+	// Default to 10 seconds. Minimum value is 1.
+	// +optional
+	PeriodSeconds *int32 `json:"periodSeconds,omitempty"`
+	// Minimum consecutive successes for the probe to be considered successful after having failed.
+	// Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+	// +optional
+	SuccessThreshold *int32 `json:"successThreshold,omitempty"`
+	// Minimum consecutive failures for the probe to be considered failed after having succeeded.
+	// Defaults to 3. Minimum value is 1.
+	// +optional
+	FailureThreshold *int32 `json:"failureThreshold,omitempty"`
+	// Optional duration in seconds the pod needs to terminate gracefully upon probe failure.
+	// The grace period is the duration in seconds after the processes running in the pod are sent
+	// a termination signal and the time when the processes are forcibly halted with a kill signal.
+	// Set this value longer than the expected cleanup time for your process.
+	// If this value is nil, the pod's terminationGracePeriodSeconds will be used. Otherwise, this
+	// value overrides the value provided by the pod spec.
+	// Value must be non-negative integer. The value zero indicates stop immediately via
+	// the kill signal (no opportunity to shut down).
+	// This is a beta field and requires enabling ProbeTerminationGracePeriod feature gate.
+	// Minimum value is 1. spec.terminationGracePeriodSeconds is used if unset.
+	// +optional
+	TerminationGracePeriodSeconds *int64 `json:"terminationGracePeriodSeconds,omitempty"`
+}
+
+// MetricSpec defines a subset of metrics to be defined for the HPA's metric array
+// more metric type can be supported as needed.
+// See https://pkg.go.dev/k8s.io/api/autoscaling/v2#MetricSpec for reference.
+type MetricSpec struct {
+	Type autoscalingv2.MetricSourceType  `json:"type"`
+	Pods *autoscalingv2.PodsMetricSource `json:"pods,omitempty"`
 }
 
 func init() {

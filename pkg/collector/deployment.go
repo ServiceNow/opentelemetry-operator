@@ -27,15 +27,15 @@ import (
 
 // Deployment builds the deployment for the given instance.
 func Deployment(cfg config.Config, logger logr.Logger, otelcol v1alpha1.OpenTelemetryCollector) appsv1.Deployment {
-	labels := Labels(otelcol, cfg.LabelsFilter())
-	labels["app.kubernetes.io/name"] = naming.Collector(otelcol)
+	name := naming.Collector(otelcol)
+	labels := Labels(otelcol, name, cfg.LabelsFilter())
 
 	annotations := Annotations(otelcol)
 	podAnnotations := PodAnnotations(otelcol)
 
 	return appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        naming.Collector(otelcol),
+			Name:        name,
 			Namespace:   otelcol.Namespace,
 			Labels:      labels,
 			Annotations: annotations,
@@ -51,16 +51,17 @@ func Deployment(cfg config.Config, logger logr.Logger, otelcol v1alpha1.OpenTele
 					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: ServiceAccountName(otelcol),
-					Containers:         []corev1.Container{Container(cfg, logger, otelcol, true)},
-					Volumes:            Volumes(cfg, otelcol),
-					DNSPolicy:          getDNSPolicy(otelcol),
-					HostNetwork:        otelcol.Spec.HostNetwork,
-					Tolerations:        otelcol.Spec.Tolerations,
-					NodeSelector:       otelcol.Spec.NodeSelector,
-					SecurityContext:    otelcol.Spec.PodSecurityContext,
-					PriorityClassName:  otelcol.Spec.PriorityClassName,
-					Affinity:           otelcol.Spec.Affinity,
+					ServiceAccountName:            ServiceAccountName(otelcol),
+					Containers:                    []corev1.Container{Container(cfg, logger, otelcol, true)},
+					Volumes:                       Volumes(cfg, otelcol),
+					DNSPolicy:                     getDNSPolicy(otelcol),
+					HostNetwork:                   otelcol.Spec.HostNetwork,
+					Tolerations:                   otelcol.Spec.Tolerations,
+					NodeSelector:                  otelcol.Spec.NodeSelector,
+					SecurityContext:               otelcol.Spec.PodSecurityContext,
+					PriorityClassName:             otelcol.Spec.PriorityClassName,
+					Affinity:                      otelcol.Spec.Affinity,
+					TerminationGracePeriodSeconds: otelcol.Spec.TerminationGracePeriodSeconds,
 				},
 			},
 		},
